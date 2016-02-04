@@ -1,0 +1,6 @@
+[Core]
+Name = GoogleCloudDatastore
+Module = gcd
+
+[Documentation]
+Description = This is the storage plugin for Google CloudDatastore.
