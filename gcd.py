@@ -12,18 +12,21 @@ log = logging.getLogger('errbot.storage.gcd')
 
 ACCOUNT_FILE_ENTRY = 'accountfile'
 PROJECT_ENTRY = 'project'
+NAMESPACE_ENTRY = 'namespace'
+DEFAULT_NAMESPACE = 'Errbot'  # DS namepace not Errbot namespace
 
 class CloudDatastore(StorageBase):
-    def __init__(self, namespace, project, credentials):
+    def __init__(self, namespace, kind, project, credentials):
         log.debug('Try to authenticate Google cloud storage on %s with %s' % (project, credentials))
         self.ds = datastore.Client.from_service_account_json(credentials, project=project, namespace=namespace)
         log.debug('API built %s', self.ds)
+        self.kind = kind
 
     def _gkey(self, key):
-        return self.ds.key('Errbot', key)
+        return self.ds.key(self.kind, key)
 
     def _get_all(self):
-        query = self.ds.query(kind='Errbot')
+        query = self.ds.query(kind=self.kind)
         return list(query.fetch())
 
     def get(self, key: str) -> Any:
@@ -33,7 +36,7 @@ class CloudDatastore(StorageBase):
         return decode(resp['value'])
 
     def remove(self, key: str):
-        key = self.ds.key('Errbot', key)
+        key = self.ds.key(self.kind, key)
         self.ds.delete(key)
 
     def set(self, key: str, value: Any) -> None:
@@ -58,6 +61,10 @@ class CloudDataStorePlugin(StoragePluginBase):
             raise Exception('You need to specify a project in your config.py like this: STORAGE_CONFIG={"project":"albator"}')
         self.credentials = self._storage_config[ACCOUNT_FILE_ENTRY] if ACCOUNT_FILE_ENTRY in self._storage_config else os.path.join(bot_config.BOT_DATA_DIR, 'servacc.json')
         self.prj = self._storage_config[PROJECT_ENTRY]
+        self.ds_namespace = self._storage_config[NAMESPACE_ENTRY] if NAMESPACE_ENTRY in self._storage_config else DEFAULT_NAMESPACE
 
     def open(self, namespace: str) -> StorageBase:
-        return CloudDatastore(namespace, self.prj, self.credentials)
+        return CloudDatastore(kind=namespace,
+                              namespace=self.ds_namespace,  # yes this is confusing but this is the mapping.
+                              project= self.prj,
+                              credentials=self.credentials)
