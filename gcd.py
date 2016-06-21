@@ -40,7 +40,7 @@ class CloudDatastore(StorageBase):
         self.ds.delete(key)
 
     def set(self, key: str, value: Any) -> None:
-        ent = datastore.Entity(key=self._gkey(key))
+        ent = datastore.Entity(key=self._gkey(key), exclude_from_indexes=['value'])
         ent['value'] = encode(value)
         self.ds.put(ent)
 
